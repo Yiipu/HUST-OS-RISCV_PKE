@@ -57,5 +57,42 @@ void switch_to(process* proc) {
 
 void print_error_line(uint64 mepc)
 {
-  panic("TODO: implement print_error_line() in process.c");
+  // Locate the error line
+  int i = 0;
+  addr_line *pline = current->line;
+  while(i < current->line_ind && pline->addr != mepc) ++i, ++pline;
+  if(pline->addr != mepc) panic("Failed to find errorline!\n");
+
+  addr_line *err_line = pline;
+  code_file *err_file = current->file + err_line->file;
+
+  char filepath[0x100];
+  strcpy(filepath, (current->dir)[err_file->dir]);
+  filepath[strlen(filepath)] = '/';
+  strcpy(filepath + strlen(filepath), err_file->file);
+
+  sprint("Runtime error at %s:%d\n", filepath, err_line->line);
+
+  // Read the content of the line
+  spike_file_t *file = spike_file_open(filepath, O_RDONLY, 0);
+  if (IS_ERR_VALUE(file)) panic("Failed to open file!\n");
+
+  char buf[0x1000];
+  spike_file_pread(file, buf, sizeof(buf), 0);
+  spike_file_close(file);
+
+  uint64 line_start = 0;
+  for(int i = 1; i < err_line->line; ++i)
+  {
+    while(buf[line_start] != '\n') ++line_start;
+    ++line_start;
+  }
+
+  char* err_line_start = buf + line_start;
+
+  char* p_err_line = buf + line_start;
+  while (*p_err_line != '\n') ++p_err_line;
+  *p_err_line = '\0';
+
+  sprint("%s\n", err_line_start);
 }
