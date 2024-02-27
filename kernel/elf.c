@@ -222,6 +222,13 @@ elf_status elf_load(elf_ctx *ctx) {
   return EL_OK;
 }
 
+//
+// load the debug_line section
+//
+elf_status elf_load_debug_line(elf_ctx *ctx) {
+  panic("TODO: implement elf_load_debug_line()");
+}
+
 typedef union {
   uint64 buf[MAX_CMDLINE_ARGS];
   char *argv[MAX_CMDLINE_ARGS];
@@ -276,6 +283,9 @@ void load_bincode_from_host_elf(process *p) {
 
   // load elf. elf_load() is defined above.
   if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
+
+  // load the debug_line section
+  if(elf_load_debug_line(&elfloader) != EL_OK) panic("Fail on loading debug_line section.\n");
 
   // entry (virtual, also physical in lab1_x) address
   p->trapframe->epc = elfloader.ehdr.entry;

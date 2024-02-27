@@ -8,7 +8,11 @@ static void handle_load_access_fault() { panic("Load access fault!"); }
 
 static void handle_store_access_fault() { panic("Store/AMO access fault!"); }
 
-static void handle_illegal_instruction() { panic("Illegal instruction!"); }
+static void handle_illegal_instruction() 
+{ 
+  print_error_line(read_csr(mepc));
+  panic("Illegal instruction!"); 
+}
 
 static void handle_misaligned_load() { panic("Misaligned Load!"); }
 
