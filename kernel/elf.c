@@ -190,8 +190,8 @@ void make_addr_line(elf_ctx *ctx, char *debug_line, uint64 length) {
         }
 endop:;
     }
-    for (int i = 0; i < p->line_ind; i++)
-        sprint("%p %d %d\n", p->line[i].addr, p->line[i].line, p->line[i].file);
+    // for (int i = 0; i < p->line_ind; i++)
+    //     sprint("%p %d %d\n", p->line[i].addr, p->line[i].line, p->line[i].file);
 }
 
 //
