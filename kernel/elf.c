@@ -190,8 +190,8 @@ void make_addr_line(elf_ctx *ctx, char *debug_line, uint64 length) {
         }
 endop:;
     }
-    // for (int i = 0; i < p->line_ind; i++)
-    //     sprint("%p %d %d\n", p->line[i].addr, p->line[i].line, p->line[i].file);
+    for (int i = 0; i < p->line_ind; i++)
+        sprint("%p %d %d\n", p->line[i].addr, p->line[i].line, p->line[i].file);
 }
 
 //
@@ -226,7 +226,28 @@ elf_status elf_load(elf_ctx *ctx) {
 // load the debug_line section
 //
 elf_status elf_load_debug_line(elf_ctx *ctx) {
-  panic("TODO: implement elf_load_debug_line()");
+
+  // find the string table section
+  elf_sect_header strtabseg;
+  if(elf_fpread(ctx,(void*)&strtabseg, sizeof(elf_sect_header), ctx->ehdr.shoff+ctx->ehdr.shentsize*ctx->ehdr.shstrndx) != sizeof(elf_sect_header)) panic("Fail on reading section header.\n");
+  char strtab_info[strtabseg.size];
+  if(elf_fpread(ctx,strtab_info, strtabseg.size, strtabseg.offset) != strtabseg.size) panic("Fail on reading string table section.\n");
+
+  // find the debug_line section
+  elf_sect_header debugseg;
+  for(uint64 offset = ctx->ehdr.shoff; offset < ctx->ehdr.shoff+ctx->ehdr.shentsize*ctx->ehdr.shnum; offset += ctx->ehdr.shentsize)
+  {
+    if(elf_fpread(ctx,(void*)&debugseg, sizeof(elf_sect_header), offset) != sizeof(elf_sect_header)) panic("Fail on reading section header.\n");
+    sprint("[debug] offset = %d, %s\n",offset,strtab_info+debugseg.name);
+    if(strcmp((char*)(strtab_info+debugseg.name),".debug_line")==0) break;
+  }
+
+  // load the debug_line section
+  static char debugline[0x1000000];
+  if(elf_fpread(ctx,(void*)debugline,debugseg.size,debugseg.offset)!=debugseg.size) panic("debugline get failed!\n");
+  make_addr_line(ctx,debugline,debugseg.size);
+
+  return EL_OK;
 }
 
 typedef union {
