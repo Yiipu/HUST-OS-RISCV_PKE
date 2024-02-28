@@ -66,6 +66,26 @@ void switch_to(process* proc) {
   return_to_user(proc->trapframe, user_satp);
 }
 
+//
+// Insert a memory block into the free list following the Worst Fit strategy.
+//
+void insert_free_block(memblock_t** block_list, memblock_t* block){
+  memblock_t *prev = *block_list;
+  memblock_t *probe = *block_list;
+  while(probe){
+    if(probe->size <= block->size) break;
+    prev = probe;
+    probe = probe->next;
+  }
+  if(probe == *block_list){
+    block->next = *block_list;
+    *block_list = block;
+  }else{
+    prev->next = block;
+    block->next = probe;
+  }
+}
+
 void *memblock_alloc(uint64 size){
   // Round up to 8 bytes
   size = ROUNDUP(size, 8);
@@ -73,14 +93,10 @@ void *memblock_alloc(uint64 size){
 
   // Find a free block
   memblock_t *b = current->free_block;
-  memblock_t *prev = current->free_block;
-  while(b){
-    if(b->size >= size) break;
-    prev = b;
-    b = b->next;
-  }
 
-  if(b == NULL){
+  // Note: using Worst Fit strategy, the head block is the largest one.
+
+  if(b == NULL || b->size < size){
     // Allocate a new page
     void* pa = alloc_page();
     uint64 va = g_ufree_page;
@@ -95,27 +111,41 @@ void *memblock_alloc(uint64 size){
     new->size = PGSIZE-sizeof(memblock_t);
     new->next = NULL;
 
-    // Add the new block to the free list
-    if(prev == NULL){
-      current->free_block = new;
-      b = new;
-    }else{
-      // Merge with the previous block if possible
-      if(prev->end == new->start - sizeof(memblock_t)){
-        prev->end = new->end;
-        prev->size += new->size;
-        memset(new, 0, sizeof(memblock_t));
-        b = prev;
-      }else{
-        prev->next = new;
-        b = new;
-      }
+    // Merge with the last block in the previous page if possible
+    memblock_t *prev = current->free_block;
+    memblock_t *probe = current->free_block;
+    while(probe){
+      if(probe->end == va)
+        break;
+      prev = probe;
+      probe = probe->next;
     }
+    if(probe){
+      probe->end = new->end;
+      probe->size += PGSIZE;
+      memset(new, 0, sizeof(memblock_t));
+      b = probe;
+      // To separate b from the free list.
+      prev->next = b->next;
+      b->next = NULL;
+    }else{
+      // b is allready separated.
+      b = new;
+    }
+  }else{
+    // To separate b from the free list.
+    current->free_block = b->next;
   }
 
   // @assert b != NULL && b->size >= size
 
-  // Split the block
+  // b now has 3 cases:
+  // 1. b == current->free_block
+  // 2. b is a new block, with size of PGSIZE - sizeof(memblock_t), CAN'T FIT SIZE > 2*PGSIZE
+  // 3. b is the last block in the previous page, with extended size (size += PGSIZE)
+  // In all cases, b is now seperated from the free list.
+
+  // Split the block and update the free list if necessary
   if(b->size > size + sizeof(memblock_t)){
     memblock_t *leftover = (memblock_t *)user_va_to_pa((pagetable_t)current->pagetable,(void*)(b->start + size));
     leftover->start = b->start + size + sizeof(memblock_t);
@@ -127,15 +157,8 @@ void *memblock_alloc(uint64 size){
     b->size = size;
     b->next = NULL;
 
-    if(b == current->free_block) 
-      current->free_block = leftover;
-    else
-      prev->next = leftover;
-  }else{
-    if(b == current->free_block)
-      current->free_block = b->next;
-    else
-      prev->next = b->next;
+    // leftover is a new free block, insert it into the free list.
+    insert_free_block(&current->free_block, leftover);
   }
 
   // Add the block to the used list
@@ -162,7 +185,9 @@ void memblock_free(uint64 ptr){
   else
     prev->next = b->next;
 
+  // Clear the block
+  memset((void*)(b + sizeof(memblock_t)), 0, b->size);
+
   // Add the block to the free list
-  b->next = current->free_block;
-  current->free_block = b;
+  insert_free_block(&current->free_block, b);
 }
