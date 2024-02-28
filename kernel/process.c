@@ -100,7 +100,8 @@ void *memblock_alloc(uint64 size){
       current->free_block = new;
       b = new;
     }else{
-      if(prev->end == new->start){
+      // Merge with the previous block if possible
+      if(prev->end == new->start - sizeof(memblock_t)){
         prev->end = new->end;
         prev->size += new->size;
         memset(new, 0, sizeof(memblock_t));
@@ -117,7 +118,7 @@ void *memblock_alloc(uint64 size){
   // Split the block
   if(b->size > size + sizeof(memblock_t)){
     memblock_t *leftover = (memblock_t *)user_va_to_pa((pagetable_t)current->pagetable,(void*)(b->start + size));
-    leftover->start = b->start + size;
+    leftover->start = b->start + size + sizeof(memblock_t);
     leftover->end = b->end;
     leftover->size = leftover->end - leftover->start;
     leftover->next = b->next;
