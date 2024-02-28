@@ -27,7 +27,7 @@ typedef struct memblock {
 } memblock_t;
 
 void *memblock_alloc(uint64 size);
-void memblock_free(void *ptr);
+void memblock_free(uint64 ptr);
 
 // the extremely simple definition of process, used for begining labs of PKE
 typedef struct process_t {

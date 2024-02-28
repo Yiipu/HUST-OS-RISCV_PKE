@@ -144,6 +144,24 @@ void *memblock_alloc(uint64 size){
   return (void*)b->start;
 }
 
-void memblock_free(void *ptr){
-  panic("TODO: implement memblock_free");
+void memblock_free(uint64 ptr){
+  // Find the block
+  memblock_t *b = current->used_block;
+  memblock_t *prev = current->used_block;
+  while(b){
+    if(b->start <= (uint64)ptr && b->end >= (uint64)ptr) break;
+    prev = b;
+    b = b->next;
+  }
+  if(b == NULL) panic("memblock_free: block not found");
+
+  // Remove the block from the used list
+  if(b == current->used_block)
+    current->used_block = b->next;
+  else
+    prev->next = b->next;
+
+  // Add the block to the free list
+  b->next = current->free_block;
+  current->free_block = b;
 }

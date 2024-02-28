@@ -68,7 +68,8 @@ uint64 sys_user_allocate_block(uint64 size) {
 // free a block of memory, indicated by "ptr".
 //
 uint64 sys_user_free_block(uint64 ptr) {
-  panic("TODO: implement sys_user_free_block");
+  memblock_free(ptr);
+  return 0;
 }
 
 
