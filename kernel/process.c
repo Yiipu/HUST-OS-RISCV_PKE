@@ -64,3 +64,11 @@ void switch_to(process* proc) {
   // note, return_to_user takes two parameters @ and after lab2_1.
   return_to_user(proc->trapframe, user_satp);
 }
+
+void *memblock_alloc(uint64 size){
+  panic("TODO: implement memblock_alloc");
+}
+
+void memblock_free(void *ptr){
+  panic("TODO: implement memblock_free");
+}

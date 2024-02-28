@@ -18,6 +18,17 @@ typedef struct trapframe_t {
   /* offset:272 */ uint64 kernel_satp;
 }trapframe;
 
+/* --- mem block --- */
+typedef struct memblock {
+  uint64 start;
+  uint64 end;
+  uint64 size;
+  struct memblock *next;
+} memblock_t;
+
+void *memblock_alloc(uint64 size);
+void memblock_free(void *ptr);
+
 // the extremely simple definition of process, used for begining labs of PKE
 typedef struct process_t {
   // pointing to the stack used in trap handling.
@@ -26,6 +37,10 @@ typedef struct process_t {
   pagetable_t pagetable;
   // trapframe storing the context of a (User mode) process.
   trapframe* trapframe;
+  // pointer to the first free block.
+  memblock_t* free_block;
+  // pointer to the first used block.
+  memblock_t* used_block;
 }process;
 
 // switch to run user app
