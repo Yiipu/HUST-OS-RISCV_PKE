@@ -61,7 +61,7 @@ uint64 sys_user_free_page(uint64 va) {
 // allocate a block of memory, with the size of "size".
 //
 uint64 sys_user_allocate_block(uint64 size) {
-  panic("TODO: implement sys_user_allocate_block");
+  return (uint64)memblock_alloc(size);
 }
 
 //

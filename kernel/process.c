@@ -16,6 +16,7 @@
 #include "pmm.h"
 #include "memlayout.h"
 #include "spike_interface/spike_utils.h"
+#include "util/functions.h"
 
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
@@ -66,7 +67,81 @@ void switch_to(process* proc) {
 }
 
 void *memblock_alloc(uint64 size){
-  panic("TODO: implement memblock_alloc");
+  // Round up to 8 bytes
+  size = ROUNDUP(size, 8);
+  if(size > PGSIZE) panic("memblock_alloc: size too large");
+
+  // Find a free block
+  memblock_t *b = current->free_block;
+  memblock_t *prev = current->free_block;
+  while(b){
+    if(b->size >= size) break;
+    prev = b;
+    b = b->next;
+  }
+
+  if(b == NULL){
+    // Allocate a new page
+    void* pa = alloc_page();
+    uint64 va = g_ufree_page;
+    g_ufree_page += PGSIZE;
+    user_vm_map((pagetable_t)current->pagetable, va, PGSIZE, (uint64)pa,
+    prot_to_type(PROT_WRITE | PROT_READ, 1));
+
+    // Turn the page into a memblock
+    memblock_t *new = (memblock_t*)pa;
+    new->start = va + sizeof(memblock_t);
+    new->end = va + PGSIZE;
+    new->size = PGSIZE-sizeof(memblock_t);
+    new->next = NULL;
+
+    // Add the new block to the free list
+    if(prev == NULL){
+      current->free_block = new;
+      b = new;
+    }else{
+      if(prev->end == new->start){
+        prev->end = new->end;
+        prev->size += new->size;
+        memset(new, 0, sizeof(memblock_t));
+        b = prev;
+      }else{
+        prev->next = new;
+        b = new;
+      }
+    }
+  }
+
+  // @assert b != NULL && b->size >= size
+
+  // Split the block
+  if(b->size > size + sizeof(memblock_t)){
+    memblock_t *leftover = (memblock_t *)user_va_to_pa((pagetable_t)current->pagetable,(void*)(b->start + size));
+    leftover->start = b->start + size;
+    leftover->end = b->end;
+    leftover->size = leftover->end - leftover->start;
+    leftover->next = b->next;
+
+    b->end = b->start + size;
+    b->size = size;
+    b->next = NULL;
+
+    if(b == current->free_block) 
+      current->free_block = leftover;
+    else
+      prev->next = leftover;
+  }else{
+    if(b == current->free_block)
+      current->free_block = b->next;
+    else
+      prev->next = b->next;
+  }
+
+  // Add the block to the used list
+  b->next = current->used_block;
+  current->used_block = b;
+
+  return (void*)b->start;
 }
 
 void memblock_free(void *ptr){
