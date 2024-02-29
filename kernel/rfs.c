@@ -594,7 +594,15 @@ int rfs_link(struct vinode *parent, struct dentry *sub_dentry, struct vinode *li
   //    rfs_add_direntry here.
   // 3) persistent the changes to disk. you can use rfs_write_back_vinode here.
   //
-  panic("You need to implement the code for creating a hard link in lab4_3.\n" );
+    // get the name of the new (link) file
+  char *name = sub_dentry->name;
+  // increase the link count of the existing file
+  link_node->nlinks++;
+  // make the changes persistent to disk
+  rfs_write_back_vinode(link_node);
+  // append the new (link) file as a dentry to its parent directory
+  rfs_add_direntry(parent, name, link_node->inum);
+  return 0;
 }
 
 //
