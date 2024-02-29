@@ -67,6 +67,9 @@ int s_start(void) {
   // added @lab3_1
   init_proc_pool();
 
+  // added @lab3_challenge2
+  init_semaphore();
+
   sprint("Switch to user mode...\n");
   // the application code (elf) is first loaded into memory, and then put into execution
   // added @lab3_1

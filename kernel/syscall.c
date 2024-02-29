@@ -95,6 +95,20 @@ ssize_t sys_user_yield() {
   return 0;
 }
 
+int sys_sem_new(int value) {
+  return sem_new(value);
+}
+
+ssize_t sys_sem_P(int sem) {
+  sem_P(sem);
+  return 0;
+}
+
+ssize_t sys_sem_V(int sem) {
+  sem_V(sem);
+  return 0;
+}
+
 //
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
@@ -114,6 +128,12 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_fork();
     case SYS_user_yield:
       return sys_user_yield();
+    case SYS_user_sem_new:
+      return sys_sem_new(a1);
+    case SYS_user_sem_P:
+      return sys_sem_P(a1);
+    case SYS_user_sem_V:
+      return sys_sem_V(a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

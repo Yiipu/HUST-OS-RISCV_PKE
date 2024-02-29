@@ -32,6 +32,9 @@ process procs[NPROC];
 // current points to the currently running user-mode application.
 process* current = NULL;
 
+// semaphore
+semaphore sems[NSEM];
+
 //
 // switch to a user-mode process
 //
@@ -259,4 +262,60 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+//
+// initialize semaphore (the sems[] array).
+//
+void init_semaphore() {
+  for (int i = 0; i < NSEM; i++) {
+    sems[i].valid = FALSE;
+    sems[i].value = 0;
+    sems[i].queue = NULL;
+  }
+}
+
+//
+// sem_new: create a new semaphore with initial value. added @lab3_challenge2
+//
+int sem_new(int value) {
+  for (int i = 0; i < NSEM; i++) {
+    if (sems[i].valid == FALSE) {
+      sems[i].valid = TRUE;
+      sems[i].value = value;
+      return i;
+    }
+  }
+  return -1;
+}
+
+//
+// sem_P: perform P operation on semaphore.
+//
+void sem_P(int sem) {
+  if(sems[sem].valid == FALSE)
+    panic("sem_P : semaphore not valid");
+  sems[sem].value--;
+  if(sems[sem].value<0){
+    current->status = BLOCKED;
+    current->queue_next = sems[sem].queue;
+    sems[sem].queue = current;
+    schedule();
+  }
+}
+
+//
+// sem_V: perform V operation on semaphore.
+//
+void sem_V(int sem) {
+  if(sems[sem].valid == FALSE)
+    panic("sem_P : semaphore not valid");
+  sems[sem].value++;
+  if(sems[sem].value<=0){
+    process* p = sems[sem].queue;
+    sems[sem].queue = p->queue_next;
+    p->queue_next = NULL;
+    p->status = READY;
+    insert_to_ready_queue(p);
+  }
 }
