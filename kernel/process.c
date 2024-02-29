@@ -275,3 +275,25 @@ int do_fork( process* parent)
 
   return child->pid;
 }
+
+int do_wait(int pid)
+{
+  // 判断pid是否合法
+  if(pid != -1 && (pid<0 || pid>NPROC || procs[pid].parent!=current)){
+    return -1;
+  }
+
+  // 设置当前进程的waitpid
+  current->waitpid = pid;
+
+  // 判断是否被阻塞
+  int flag = is_blocked(current);
+  if(flag == -1){
+    insert_to_blocked_queue(current);
+    schedule();
+    // 当前进程将会被阻塞，所以下面的返回不会被执行。
+    return -2;
+  }else{
+    return flag;
+  }
+}
