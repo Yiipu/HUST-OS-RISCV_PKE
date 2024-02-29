@@ -241,11 +241,8 @@ int do_fork( process* parent)
           child->pagetable,
           parent->mapped_info[i].va,
           parent->mapped_info[i].npages*PGSIZE,
-          lookup_pa(parent->pagetable,
-          parent->mapped_info[i].va),
-          prot_to_type(
-            PROT_EXEC|PROT_READ,1
-        ));
+          lookup_pa(parent->pagetable,parent->mapped_info[i].va),
+          prot_to_type(PROT_EXEC|PROT_READ,1));
 
         // after mapping, register the vm region (do not delete codes below!)
         child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
@@ -254,6 +251,24 @@ int do_fork( process* parent)
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
         break;
+      case DATA_SEGMENT:
+      {
+        // added lab3_challenge1
+        for( int j=0; j<parent->mapped_info[i].npages; j++ ){
+          uint64 addr = lookup_pa(parent->pagetable, parent->mapped_info[i].va+j*PGSIZE);
+          char *newaddr = alloc_page(); memcpy(newaddr, (void *)addr, PGSIZE);
+          map_pages(child->pagetable, parent->mapped_info[i].va+j*PGSIZE, PGSIZE,
+          (uint64)newaddr, prot_to_type(PROT_WRITE | PROT_READ, 1));
+        }
+
+        // after mapping, register the vm region (do not delete codes below!)
+        child->mapped_info[child->total_mapped_region].va = parent->mapped_info[i].va;
+        child->mapped_info[child->total_mapped_region].npages =
+          parent->mapped_info[i].npages;
+        child->mapped_info[child->total_mapped_region].seg_type = DATA_SEGMENT;
+        child->total_mapped_region++;
+        break;
+      }
     }
   }
 
@@ -263,4 +278,26 @@ int do_fork( process* parent)
   insert_to_ready_queue( child );
 
   return child->pid;
+}
+
+int do_wait(int pid)
+{
+  // 判断pid是否合法
+  if(pid != -1 && (pid<0 || pid>NPROC || procs[pid].parent!=current)){
+    return -1;
+  }
+
+  // 设置当前进程的waitpid
+  current->waitpid = pid;
+
+  // 判断是否被阻塞
+  int flag = is_blocked(current);
+  if(flag == -1){
+    insert_to_blocked_queue(current);
+    schedule();
+    // 当前进程将会被阻塞，所以下面的返回不会被执行。
+    return -2;
+  }else{
+    return flag;
+  }
 }

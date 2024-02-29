@@ -78,6 +78,13 @@ void yield() {
 }
 
 //
+// lib call to wait
+//
+void wait(int pid) {
+  do_user_call(SYS_user_wait, pid, 0, 0, 0, 0, 0, 0);
+}
+
+//
 // lib call to open
 //
 int open(const char *pathname, int flags) {
