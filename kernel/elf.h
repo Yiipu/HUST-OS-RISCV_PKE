@@ -55,14 +55,29 @@ typedef enum elf_status_t {
 
 } elf_status;
 
+// file system type, consider moving to somewhere else
+typedef enum file_system_t {
+  FS_SFI = 0, // spike file interface file system
+  FS_VFS, // virtual file system
+  FS_RFS, // remote file system
+  FS_HFS, // host file system
+} file_system;
+
 typedef struct elf_ctx_t {
   void *info;
   elf_header ehdr;
 } elf_ctx;
 
+typedef struct elf_info_t {
+  file_system fs;
+  void *f;
+  process *p;
+} elf_info;
+
 elf_status elf_init(elf_ctx *ctx, void *info);
 elf_status elf_load(elf_ctx *ctx);
 
 void load_bincode_from_host_elf(process *p);
+void load_bincode_from_host_elf_vfs(process *p, char *path);
 
 #endif
