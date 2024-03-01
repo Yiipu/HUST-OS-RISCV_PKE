@@ -280,6 +280,14 @@ int do_fork( process* parent)
   return child->pid;
 }
 
+int do_execve(char* pathpa){
+  process* proc = alloc_process();
+  load_bincode_from_host_elf_vfs(proc, pathpa);
+  insert_to_ready_queue( proc );
+  schedule();
+  return 0;
+}
+
 int do_wait(int pid)
 {
   // 判断pid是否合法
