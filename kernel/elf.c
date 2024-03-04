@@ -42,6 +42,7 @@ static uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset) {
     case FS_SFI:
       return spike_file_pread(msg->f, dest, nb, offset);
     case FS_VFS:
+      // dose no effect on vfs_read.
       ((struct file*)(msg->f))->offset = offset;
       return vfs_read(msg->f, dest, nb);
     default:
@@ -73,9 +74,19 @@ elf_status elf_load(elf_ctx *ctx) {
   int i, off;
 
   // traverse the elf program segment headers
-  for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
+  for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(elf_prog_header)) {
+    sprint("loading segment %d/%d, at offset %d\n", i + 1, ctx->ehdr.phnum, off);
     // read segment headers
     if (elf_fpread(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
+
+    sprint("type: 0x%x\n", ph_addr.type);
+    sprint("flags: 0x%x\n", ph_addr.flags);
+    // sprint("off: 0x%lx\n", ph_addr.off);
+    // sprint("vaddr: 0x%lx\n", ph_addr.vaddr);
+    // sprint("paddr: 0x%lx\n", ph_addr.paddr);
+    // sprint("filesz: 0x%lx\n", ph_addr.filesz);
+    // sprint("memsz: 0x%lx\n", ph_addr.memsz);
+    // sprint("align: 0x%lx\n", ph_addr.align);
 
     if (ph_addr.type != ELF_PROG_LOAD) continue;
     if (ph_addr.memsz < ph_addr.filesz) return EL_ERR;
@@ -139,7 +150,7 @@ static size_t parse_args(arg_buf *arg_bug_msg) {
 }
 
 //
-// load the elf of user application, by using the spike file interface.
+// load the elf of user application, by using VFS.
 //
 void load_bincode_from_host_elf(process *p) {
   arg_buf arg_bug_msg;
@@ -155,8 +166,8 @@ void load_bincode_from_host_elf(process *p) {
   // elf_info is defined above, used to tie the elf file and its corresponding process.
   elf_info info;
 
-  info.fs = FS_SFI;
-  info.f = spike_file_open(arg_bug_msg.argv[0], O_RDONLY, 0);
+  info.fs = FS_VFS;
+  info.f = vfs_open(arg_bug_msg.argv[0], O_RDONLY);
   info.p = p;
   // IS_ERR_VALUE is a macro defined in spike_interface/spike_htif.h
   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
@@ -171,8 +182,8 @@ void load_bincode_from_host_elf(process *p) {
   // entry (virtual, also physical in lab1_x) address
   p->trapframe->epc = elfloader.ehdr.entry;
 
-  // close the host spike file
-  spike_file_close( info.f );
+  // close the file
+  vfs_close(info.f);
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
 }
