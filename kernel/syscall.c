@@ -226,7 +226,7 @@ ssize_t sys_user_unlink(char * vfn){
 // lib call to exec
 //
 ssize_t do_exec(char * pathva){
-  current->status = ZOMBIE;Q
+  current->status = ZOMBIE;
   char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
   return do_execve(pathpa);
 }

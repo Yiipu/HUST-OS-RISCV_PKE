@@ -37,15 +37,10 @@ static uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset) {
   // call spike file utility to load the content of elf file into memory.
   // spike_file_pread will read the elf file (msg->f) from offset to memory (indicated by
   // *dest) for nb bytes.
-  sprint("using file system: %d\n", msg->fs);
   switch(msg->fs){
     case FS_SFI:
       return spike_file_pread(msg->f, dest, nb, offset);
     case FS_VFS:
-      // the fllowing line dose no effect on vfs_read.
-      // ((struct file*)(msg->f))->offset = offset;
-      
-      // fixes the bug.
       vfs_lseek(msg->f, offset, SEEK_SET);
       return vfs_read(msg->f, dest, nb);
     default:
@@ -78,18 +73,8 @@ elf_status elf_load(elf_ctx *ctx) {
 
   // traverse the elf program segment headers
   for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(elf_prog_header)) {
-    sprint("loading segment %d/%d, at offset %d\n", i + 1, ctx->ehdr.phnum, off);
     // read segment headers
     if (elf_fpread(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
-
-    sprint("type: 0x%x\n", ph_addr.type);
-    sprint("flags: 0x%x\n", ph_addr.flags);
-    // sprint("off: 0x%lx\n", ph_addr.off);
-    // sprint("vaddr: 0x%lx\n", ph_addr.vaddr);
-    // sprint("paddr: 0x%lx\n", ph_addr.paddr);
-    // sprint("filesz: 0x%lx\n", ph_addr.filesz);
-    // sprint("memsz: 0x%lx\n", ph_addr.memsz);
-    // sprint("align: 0x%lx\n", ph_addr.align);
 
     if (ph_addr.type != ELF_PROG_LOAD) continue;
     if (ph_addr.memsz < ph_addr.filesz) return EL_ERR;
