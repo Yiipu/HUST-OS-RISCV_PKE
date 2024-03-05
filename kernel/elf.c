@@ -37,12 +37,10 @@ static uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset) {
   // call spike file utility to load the content of elf file into memory.
   // spike_file_pread will read the elf file (msg->f) from offset to memory (indicated by
   // *dest) for nb bytes.
-  sprint("using file system: %d\n", msg->fs);
   switch(msg->fs){
     case FS_SFI:
       return spike_file_pread(msg->f, dest, nb, offset);
     case FS_VFS:
-      // ((struct file*)(msg->f))->offset = offset;
       vfs_lseek(msg->f, offset, SEEK_SET);
       return vfs_read(msg->f, dest, nb);
     default:
