@@ -42,7 +42,8 @@ static uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset) {
     case FS_SFI:
       return spike_file_pread(msg->f, dest, nb, offset);
     case FS_VFS:
-      ((struct file*)(msg->f))->offset = offset;
+      // ((struct file*)(msg->f))->offset = offset;
+      vfs_lseek(msg->f, offset, SEEK_SET);
       return vfs_read(msg->f, dest, nb);
     default:
       panic("unknown file system encountered.\n");
