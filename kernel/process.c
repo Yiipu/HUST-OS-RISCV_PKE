@@ -282,7 +282,7 @@ int do_fork( process* parent)
 
 int do_execve(char* pathpa){
   process* proc = alloc_process();
-  load_bincode_from_host_elf_vfs(proc, pathpa);
+  load_bincode_from_host_elf(proc, pathpa);
   insert_to_ready_queue( proc );
   schedule();
   return 0;

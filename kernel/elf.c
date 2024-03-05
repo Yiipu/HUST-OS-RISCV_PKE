@@ -4,12 +4,17 @@
  */
 
 #include "elf.h"
-#include "vfs.h"
 #include "string.h"
 #include "riscv.h"
 #include "vmm.h"
 #include "pmm.h"
+#include "vfs.h"
 #include "spike_interface/spike_utils.h"
+
+typedef struct elf_info_t {
+  struct file *f;
+  process *p;
+} elf_info;
 
 //
 // the implementation of allocater. allocates memory space for later segment loading.
@@ -30,22 +35,12 @@ static void *elf_alloc_mb(elf_ctx *ctx, uint64 elf_pa, uint64 elf_va, uint64 siz
 }
 
 //
-// actual file reading, using the spike file interface or VFS.
+// actual file reading, using the vfs file interface.
 //
 static uint64 elf_fpread(elf_ctx *ctx, void *dest, uint64 nb, uint64 offset) {
   elf_info *msg = (elf_info *)ctx->info;
-  // call spike file utility to load the content of elf file into memory.
-  // spike_file_pread will read the elf file (msg->f) from offset to memory (indicated by
-  // *dest) for nb bytes.
-  switch(msg->fs){
-    case FS_SFI:
-      return spike_file_pread(msg->f, dest, nb, offset);
-    case FS_VFS:
-      vfs_lseek(msg->f, offset, SEEK_SET);
-      return vfs_read(msg->f, dest, nb);
-    default:
-      panic("unknown file system encountered.\n");
-  }
+  vfs_lseek(msg->f, offset, SEEK_SET);
+  return vfs_read(msg->f, dest, nb);
 }
 
 //
@@ -72,7 +67,7 @@ elf_status elf_load(elf_ctx *ctx) {
   int i, off;
 
   // traverse the elf program segment headers
-  for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(elf_prog_header)) {
+  for (i = 0, off = ctx->ehdr.phoff; i < ctx->ehdr.phnum; i++, off += sizeof(ph_addr)) {
     // read segment headers
     if (elf_fpread(ctx, (void *)&ph_addr, sizeof(ph_addr), off) != sizeof(ph_addr)) return EL_EIO;
 
@@ -111,51 +106,18 @@ elf_status elf_load(elf_ctx *ctx) {
   return EL_OK;
 }
 
-typedef union {
-  uint64 buf[MAX_CMDLINE_ARGS];
-  char *argv[MAX_CMDLINE_ARGS];
-} arg_buf;
-
 //
-// returns the number (should be 1) of string(s) after PKE kernel in command line.
-// and store the string(s) in arg_bug_msg.
+// load the elf of user application, by using the spike file interface.
 //
-static size_t parse_args(arg_buf *arg_bug_msg) {
-  // HTIFSYS_getmainvars frontend call reads command arguments to (input) *arg_bug_msg
-  long r = frontend_syscall(HTIFSYS_getmainvars, (uint64)arg_bug_msg,
-      sizeof(*arg_bug_msg), 0, 0, 0, 0, 0);
-  kassert(r == 0);
-
-  size_t pk_argc = arg_bug_msg->buf[0];
-  uint64 *pk_argv = &arg_bug_msg->buf[1];
-
-  int arg = 1;  // skip the PKE OS kernel string, leave behind only the application name
-  for (size_t i = 0; arg + i < pk_argc; i++)
-    arg_bug_msg->argv[i] = (char *)(uintptr_t)pk_argv[arg + i];
-
-  //returns the number of strings after PKE kernel in command line
-  return pk_argc - arg;
-}
-
-//
-// load the elf of user application, by using VFS.
-//
-void load_bincode_from_host_elf(process *p) {
-  arg_buf arg_bug_msg;
-
-  // retrieve command line arguements
-  size_t argc = parse_args(&arg_bug_msg);
-  if (!argc) panic("You need to specify the application program!\n");
-
-  sprint("Application: %s\n", arg_bug_msg.argv[0]);
+void load_bincode_from_host_elf(process *p, char *filename) {
+  sprint("Application: %s\n", filename);
 
   //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
   elf_ctx elfloader;
   // elf_info is defined above, used to tie the elf file and its corresponding process.
   elf_info info;
 
-  info.fs = FS_VFS;
-  info.f = vfs_open(arg_bug_msg.argv[0], O_RDONLY);
+  info.f = vfs_open(filename, O_RDONLY);
   info.p = p;
   // IS_ERR_VALUE is a macro defined in spike_interface/spike_htif.h
   if (IS_ERR_VALUE(info.f)) panic("Fail on openning the input application program.\n");
@@ -170,40 +132,8 @@ void load_bincode_from_host_elf(process *p) {
   // entry (virtual, also physical in lab1_x) address
   p->trapframe->epc = elfloader.ehdr.entry;
 
-  // close the file
-  vfs_close(info.f);
-
-  sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
-}
-
-//
-// load the elf of user application, by using the VFS.
-//
-void load_bincode_from_host_elf_vfs(process *p, char *path) {
-
-  //elf loading. elf_ctx is defined in kernel/elf.h, used to track the loading process.
-  elf_ctx elfloader;
-  // elf_info is defined above, used to tie the elf file and its corresponding process.
-  elf_info info;
-
-  sprint("Application: %s\n", path);
-
-  info.fs = FS_VFS;
-  info.f = vfs_open(path, O_RDONLY);
-  info.p = p;
-
-  // init elfloader context. elf_init() is defined above.
-  if (elf_init(&elfloader, &info) != EL_OK)
-    panic("fail to init elfloader.\n");
-
-  // load elf. elf_load() is defined above.
-  if (elf_load(&elfloader) != EL_OK) panic("Fail on loading elf.\n");
-
-  // entry (virtual, also physical in lab1_x) address
-  p->trapframe->epc = elfloader.ehdr.entry;
-
-  // close the file
-  vfs_close(info.f);
+  // close the vfs file
+  vfs_close( info.f );
 
   sprint("Application program entry point (virtual address): 0x%lx\n", p->trapframe->epc);
 }
