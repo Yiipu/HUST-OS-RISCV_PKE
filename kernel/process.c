@@ -167,6 +167,14 @@ void init_proc_vmspace(process* process){
   process->pfiles = init_proc_file_management();
 }
 
+void free_proc_vmspace(process* process){
+  free_page((void*)process->trapframe);
+  free_pagetable((void*)process->pagetable); // frees the user stack as well
+  free_page((void*)(process->kstack-PGSIZE));
+  free_page((void*)process->mapped_info);
+  free_page((void*)process->pfiles);
+}
+
 //
 // reclaim a process. added @lab3_1
 //
@@ -289,10 +297,10 @@ int do_fork( process* parent)
 }
 
 int do_execve(char* pathpa){
-  process* proc = alloc_process();
-  load_bincode_from_host_elf(proc, pathpa);
-  insert_to_ready_queue( proc );
-  schedule();
+  free_proc_vmspace(current);
+  init_proc_vmspace(current);
+  // Q: where is the pathpa? shouldn't it be freed?
+  load_bincode_from_host_elf(current, pathpa);
   return 0;
 }
 

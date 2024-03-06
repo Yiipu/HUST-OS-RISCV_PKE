@@ -107,6 +107,8 @@ void init_proc_pool();
 process* alloc_process();
 // initialize a process's vm space
 void init_proc_vmspace(process* process);
+// destruct a process's vm space and free physical pages.
+void free_proc_vmspace(process* proc);
 // reclaim a process, destruct its vm space and free physical pages.
 int free_process( process* proc );
 // fork a child from parent

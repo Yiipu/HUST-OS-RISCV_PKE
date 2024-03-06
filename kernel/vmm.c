@@ -194,6 +194,29 @@ void user_vm_unmap(pagetable_t page_dir, uint64 va, uint64 size, int free) {
 }
 
 //
+// traverse all ptes in pagetable, free the physical pages and reset the pte.
+// high performence loss.
+//
+void free_pagetable(pagetable_t page_dir) {
+  // traverse all virtual pages
+  // note: the MAXVA is beyond the highest possible virtual address
+  for (int i = 0; i < MAXVA; i += PGSIZE) {
+    pte_t* pte = page_walk(page_dir, i, 0);
+    if (pte != 0 && (*pte & PTE_V) != 0) { // if the page is mapped
+      sprint("free_pagetable: free page at va: 0x%lx\n", i);
+      uint64 pa = PTE2PA(*pte);
+      free_page((void*)pa);
+      *pte &= (~PTE_V); // set the valid bit to 0
+    }
+    if (pte != 0 && (*pte & PTE_V) == 0) { // if the page is not mapped
+      // the phycial page should be mapped incrementally(or is it...?),
+      // so we can break here.
+      break;
+    }
+  }
+}
+
+//
 // debug function, print the vm space of a process. added @lab3_1
 //
 void print_proc_vmspace(process* proc) {
