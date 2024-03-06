@@ -91,6 +91,9 @@ typedef struct process_t {
   // accounting. added @lab3_3
   int tick_count;
 
+  // blocked & waiting for waitpid. added @lab3_challenge1
+  uint64 waitpid;
+
   // file system. added @lab4_1
   proc_file_management *pfiles;
 }process;
@@ -102,10 +105,18 @@ void switch_to(process*);
 void init_proc_pool();
 // allocate an empty process, init its vm space. returns its pid
 process* alloc_process();
+// initialize a process's vm space
+void init_proc_vmspace(process* process);
+// destruct a process's vm space and free physical pages.
+void free_proc_vmspace(process* proc);
 // reclaim a process, destruct its vm space and free physical pages.
 int free_process( process* proc );
 // fork a child from parent
 int do_fork(process* parent);
+
+int do_wait(int pid);
+
+int do_execve(char* pathpa);
 
 // current running process
 extern process* current;

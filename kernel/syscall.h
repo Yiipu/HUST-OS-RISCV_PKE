@@ -14,6 +14,8 @@
 // added @lab3_1
 #define SYS_user_fork (SYS_user_base + 4)
 #define SYS_user_yield (SYS_user_base + 5)
+//added @lab3_challenge_1
+#define SYS_user_wait (SYS_user_base + 6)
 // added @lab4_1
 #define SYS_user_open (SYS_user_base + 17)
 #define SYS_user_read (SYS_user_base + 18)
@@ -30,6 +32,8 @@
 // added @lab4_3
 #define SYS_user_link   (SYS_user_base + 28)
 #define SYS_user_unlink (SYS_user_base + 29)
+// added @lab4_challenge2
+#define SYS_user_exec (SYS_user_base + 30)
 
 long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, long a7);
 

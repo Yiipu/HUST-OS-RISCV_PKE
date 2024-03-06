@@ -7,6 +7,10 @@
 #define TIME_SLICE_LEN  2
 
 void insert_to_ready_queue( process* proc );
+// added for lab3_challenge1
+void insert_to_blocked_queue(process *proc);
+int is_blocked(process *proc);
+
 void schedule();
 
 #endif

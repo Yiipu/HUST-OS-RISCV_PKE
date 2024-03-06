@@ -90,9 +90,18 @@ ssize_t sys_user_yield() {
   // hint: the functionality of yield is to give up the processor. therefore,
   // we should set the status of currently running process to READY, insert it in
   // the rear of ready queue, and finally, schedule a READY process to run.
-  panic( "You need to implement the yield syscall in lab3_2.\n" );
+  current->status=READY;
+  insert_to_ready_queue(current);
+  schedule();
 
   return 0;
+}
+
+//
+// implement the SYS_user_wait syscall
+//
+ssize_t sys_user_wait(long pid) {
+  return do_wait(pid);
 }
 
 //
@@ -214,6 +223,15 @@ ssize_t sys_user_unlink(char * vfn){
 }
 
 //
+// lib call to exec
+//
+ssize_t do_exec(char * pathva){
+  current->status = ZOMBIE;
+  char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
+  return do_execve(pathpa);
+}
+
+//
 // [a0]: the syscall number; [a1] ... [a7]: arguments to the syscalls.
 // returns the code of success, (e.g., 0 means success, fail for otherwise)
 //
@@ -232,6 +250,8 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_fork();
     case SYS_user_yield:
       return sys_user_yield();
+    case SYS_user_wait:
+      return sys_user_wait(a1);
     // added @lab4_1
     case SYS_user_open:
       return sys_user_open((char *)a1, a2);
@@ -261,6 +281,9 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_link((char *)a1, (char *)a2);
     case SYS_user_unlink:
       return sys_user_unlink((char *)a1);
+    // added @lab4_challenge2
+    case SYS_user_exec:
+      return do_exec((char *)a1);
     default:
       panic("Unknown syscall %ld \n", a0);
   }
