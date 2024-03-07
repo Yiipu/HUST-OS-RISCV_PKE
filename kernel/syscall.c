@@ -225,10 +225,11 @@ ssize_t sys_user_unlink(char * vfn){
 //
 // lib call to exec
 //
-ssize_t do_exec(char * pathva){
+ssize_t do_exec(char *command, char *para){
   current->status = ZOMBIE;
-  char * pathpa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), pathva);
-  return do_execve(pathpa);
+  char *command_pa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), command);
+  char *para_pa = (char*)user_va_to_pa((pagetable_t)(current->pagetable), para);
+  return do_execve(command_pa, para_pa);
 }
 
 //
@@ -283,7 +284,7 @@ long do_syscall(long a0, long a1, long a2, long a3, long a4, long a5, long a6, l
       return sys_user_unlink((char *)a1);
     // added @lab4_challenge2
     case SYS_user_exec:
-      return do_exec((char *)a1);
+      return do_exec((char *)a1, (char *)a2);
     default:
       panic("Unknown syscall %ld \n", a0);
   }

@@ -296,11 +296,12 @@ int do_fork( process* parent)
   return child->pid;
 }
 
-int do_execve(char* pathpa){
+int do_execve(char* pathpa, char* para){
   free_proc_vmspace(current);
   init_proc_vmspace(current);
   // Q: where is the pathpa? shouldn't it be freed?
   load_bincode_from_host_elf(current, pathpa);
+  panic("TODO: load the para to user program\n")
   return 0;
 }
 

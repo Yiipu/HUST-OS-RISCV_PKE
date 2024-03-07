@@ -116,7 +116,7 @@ int do_fork(process* parent);
 
 int do_wait(int pid);
 
-int do_execve(char* pathpa);
+int do_execve(char* command, char* para);
 
 // current running process
 extern process* current;

@@ -178,6 +178,6 @@ int close(int fd) {
 //
 // lib call to exec
 //
-int exec(const char *path) {
-  return do_user_call(SYS_user_exec, (uint64)path, 0, 0, 0, 0, 0, 0);
+int exec(const char *command, const char *para) {
+  return do_user_call(SYS_user_exec, (uint64)command, (uint64)para, 0, 0, 0, 0, 0);
 }
