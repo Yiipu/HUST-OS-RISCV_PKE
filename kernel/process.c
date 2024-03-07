@@ -17,6 +17,7 @@
 #include "memlayout.h"
 #include "sched.h"
 #include "spike_interface/spike_utils.h"
+#include "util/functions.h"
 
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
@@ -296,12 +297,51 @@ int do_fork( process* parent)
   return child->pid;
 }
 
-int do_execve(char* pathpa, char* para){
+// debug function, print the top of user stack
+void print_user_stack(process* proc){
+  uint64 sp = proc->trapframe->regs.sp;
+  sprint("user stack of process %d:\n", proc->pid);
+  void *pa = user_va_to_pa(proc->pagetable, (void*)sp);
+  if(pa == 0){
+    sprint("0x%lx: 0x%lx\n", sp, 0);
+    return;
+  }
+  sprint("0x%lx: 0x%lx\n", sp, *(uint64*)pa);
+  sprint("content: %s\n", (char*)pa);
+}
+
+int do_execve(char* command, char* para){
+  // release current process's resources
   free_proc_vmspace(current);
+
+  // reset the process's vm space
   init_proc_vmspace(current);
-  // Q: where is the pathpa? shouldn't it be freed?
-  load_bincode_from_host_elf(current, pathpa);
-  panic("TODO: load the para to user program\n")
+
+  // load the binary file from host file system
+  load_bincode_from_host_elf(current, command);
+
+  // push the argv parameter to the user stack
+  //
+  // **note**: the user program's main function will NOT read the paras directly from stack,
+  // but from the a0 and a1 registers in the trapframe.
+  // a0 reg stores the number of paras ,and a1 reg stores a char[] pointer.
+
+  // push the first (and only) array to the user stack.
+  uint64 sp = current->trapframe->regs.sp;
+  uint64 len = strlen(para);
+  sp -= ROUNDUP(len + 1, 8);
+  memcpy(user_va_to_pa(current->pagetable, (void *)sp), para, len + 1);
+  current->trapframe->regs.sp = sp;
+
+  // push the char[] pointer to the user stack
+  sp -= 8;
+  *(uint64 *)user_va_to_pa(current->pagetable, (void *)sp) = sp + 8;
+  current->trapframe->regs.sp = sp;
+
+  // load the parameters to the registers
+  current->trapframe->regs.a0 = 1;  // number of parameters
+  current->trapframe->regs.a1 = sp; // the char[] pointer
+
   return 0;
 }
 
