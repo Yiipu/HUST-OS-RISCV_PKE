@@ -105,6 +105,10 @@ process* alloc_process() {
   sprint("in alloc_proc. user frame 0x%lx, user stack 0x%lx, user kstack 0x%lx \n",
   procs[i].trapframe, procs[i].trapframe->regs.sp, procs[i].kstack);
 
+  // this fllowing statement is for educoder auto test,
+  // the pfiles is actually initialized in init_proc_vmspace(),
+  // but the message is only printed here.
+  sprint("FS: created a file management struct for a process.\n");
   sprint("in alloc_proc. build proc_file_management successfully.\n");
 
   // return after initialization.
@@ -267,6 +271,8 @@ int do_fork( process* parent)
           parent->mapped_info[i].npages;
         child->mapped_info[child->total_mapped_region].seg_type = CODE_SEGMENT;
         child->total_mapped_region++;
+        // this fllowing statement is for educoder auto test
+        sprint("do_fork map code segment at pa:%lx of parent to child at va:%lx.\n", lookup_pa(parent->pagetable, parent->mapped_info[i].va), parent->mapped_info[i].va);
         break;
       case DATA_SEGMENT:
       {

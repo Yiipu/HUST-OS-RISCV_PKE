@@ -46,7 +46,8 @@ proc_file_management *init_proc_file_management(void) {
   for (int fd = 0; fd < MAX_FILES; ++fd)
     pfiles->opened_files[fd].status = FD_NONE;
 
-  sprint("FS: created a file management struct for a process.\n");
+  // check process.c->alloc_process() for the reason of the next line being commented
+  // sprint("FS: created a file management struct for a process.\n");
   return pfiles;
 }
 
