@@ -83,10 +83,10 @@ int s_start(void) {
   // the application code (elf) is first loaded into memory, and then put into execution
   load_user_program(&user_app[hartid]);
 
+  sprint("hartid = %d: Switch to user mode...\n", hartid);
   spinlock_unlock(&BootLock);
   sync_barrier(&count, NCPU);
 
-  sprint("hartid = %d: Switch to user mode...\n", hartid);
   // switch_to() is defined in kernel/process.c
   switch_to(&user_app[hartid]);
 

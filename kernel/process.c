@@ -14,6 +14,7 @@
 #include "string.h"
 
 #include "spike_interface/spike_utils.h"
+#include "sync_utils.h"
 
 //Two functions defined in kernel/usertrap.S
 extern char smode_trap_vector[];
@@ -21,6 +22,7 @@ extern void return_to_user(trapframe*);
 
 // current points to the currently running user-mode application.
 process* current[NCPU] = {NULL, NULL};
+static int UserAppCount = 0;
 
 //
 // switch to a user-mode process
@@ -51,6 +53,7 @@ void switch_to(process* proc) {
   // set S Exception Program Counter (sepc register) to the elf entry pc.
   write_csr(sepc, proc->trapframe->epc);
 
+  sync_barrier(&UserAppCount, NCPU);
   // return_to_user() is defined in kernel/strap_vector.S. switch to user mode with sret.
   return_to_user(proc->trapframe);
 }

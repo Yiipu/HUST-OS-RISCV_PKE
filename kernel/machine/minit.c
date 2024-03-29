@@ -99,7 +99,6 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
   // init the spike file interface (stdin,stdout,stderr)
   // functions with "spike_" prefix are all defined in codes under spike_interface/,
   // sprint is also defined in spike_interface/spike_utils.c
-  sprint("In m_start, hartid:%d\n", hartid);
 
   spinlock_lock(&BootLock);
 
@@ -112,6 +111,8 @@ void m_start(uintptr_t hartid, uintptr_t dtb) {
     // init_dtb() is defined above.
     init_dtb(dtb);
   }
+
+  sprint("In m_start, hartid:%d\n", hartid);
 
   // save the address of trap frame for interrupt in M mode to "mscratch". added @lab1_2
   write_csr(mscratch, &g_itrframe[hartid]);
